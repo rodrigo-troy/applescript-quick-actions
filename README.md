@@ -1,8 +1,6 @@
 # AppleScripts
 
-A collection of macOS AppleScript utilities that automate Finder file tasks — video processing,
-image batch operations, and quick file creation. Each script runs as an Automator Quick Action
-(right-click menu);
+A collection of macOS AppleScript utilities that automate Finder file tasks — video processing, image batch operations, and quick file creation. Each script runs as an Automator Quick Action (right-click menu);
 
 ## Scripts
 
@@ -124,8 +122,6 @@ Batch-converts one or more M4A audio files to MP3 using FFmpeg + LAME.
 
 - Processes one or more selected `.m4a` files
 - Prompts once for a compression tier: **High Quality**, **Balanced**, or **Small File**
-- Encodes audio with LAME (`libmp3lame`) at `320k` / `192k` /
-  `128k` (the chosen tier applies to every file in the batch)
 - Drops any embedded cover-art stream (`-vn`) so the output is audio-only
 - Per-file errors don't abort the batch; a summary alert reports processed/error counts when it finishes
 - Saves output as `<original>-converted_YYYYMMDD_HHMMSS.mp3` in the same folder as each source
@@ -138,6 +134,32 @@ Batch-converts one or more M4A audio files to MP3 using FFmpeg + LAME.
 1. Select one or more `.m4a` files in Finder
 2. Run the script
 3. Pick a compression tier when prompted
+
+---
+
+### Change MP3 bitrate
+
+Re-encodes one or more existing MP3 files at a user-chosen bitrate using FFmpeg + LAME.
+
+**What it does:**
+
+- Processes one or more selected `.mp3` files
+- Prompts once for a bitrate tier: **320k - High Quality**, **192k - Balanced**, **128k - Small
+  File**, or **64k mono - Tiny (voice only)** (the chosen tier applies to every file in the batch)
+- Encodes with LAME (`libmp3lame`); the 64k tier also downmixes to mono at 22.05 kHz so output stays
+  voice-sized rather than music-sized
+- Drops any embedded cover-art stream (`-vn`) so the output is audio-only
+- Per-file errors don't abort the batch; a summary alert reports processed/error counts when it finishes
+- Saves output as `<original>-<bitrate>_YYYYMMDD_HHMMSS.mp3` in the same folder as each source
+  (bitrate label = `320k` / `192k` / `128k` / `64k-mono`), so re-runs at different tiers don't collide
+
+**Requirements:** FFmpeg (`brew install ffmpeg`)
+
+**Usage:**
+
+1. Select one or more `.mp3` files in Finder
+2. Run the script
+3. Pick a bitrate tier when prompted
 
 ---
 
@@ -170,15 +192,54 @@ or other intermediary needed — the script talks to Pixelmator Pro directly.
 
 ---
 
+### View Metadata
+
+Writes a human-readable metadata dump as a `.txt` sidecar next to each selected video or image
+file. Conceptual pair to Remove Metadata — anything that script strips, this one shows you first.
+
+**What it does:**
+
+- Accepts a mixed Finder selection of videos (`.mp4`, `.mov`) and images
+- Runs a single ExifTool call per file with `-G1 -a -s` (group-prefixed, dedupe-disabled, short
+  tag names) for all classes — no per-tool dispatch
+- Each sidecar starts with a 3-line header (`# Metadata for`, `# Source`, `# Generated`), a blank
+  line, then the full ExifTool dump
+- Per-file errors don't abort the batch; a summary alert reports processed / error / skipped
+  counts when it finishes
+- Aborts up-front if ExifTool is missing (no fallback)
+- Saves output as `<original>-metadata_YYYYMMDD_HHMMSS.txt` in the same folder as each source —
+  always `.txt`, regardless of source extension. All sidecars in a single batch share the same
+  timestamp so they sort together in Finder
+
+**Supported formats:**
+
+- Videos: `.mp4`, `.mov`
+- Images: `.jpg`, `.jpeg`, `.png`, `.gif`, `.heic`, `.heif`, `.webp`, `.bmp`, `.tiff`, `.tif`
+
+**Requirements:** ExifTool (`brew install exiftool`)
+
+**Usage:**
+
+1. Select one or more supported files in Finder (mixing videos and images is fine)
+2. Run the script
+
+---
+
 ### New file
 
-Creates a new `untitled.txt` file in the active Finder window's folder.
+Creates a new file in the active Finder window's folder with a user-chosen name and type.
 
 **What it does:**
 
 - Reads the front Finder window's target folder (falls back to `~/Downloads` if no Finder window is open)
-- Creates `untitled.txt` there
-- Selects the new file in Finder so it's ready to rename
+- Prompts for a file name (defaults to `untitled` — empty input also falls back to the default)
+- Prompts for a file type via a select widget with 10 options: **Text (.txt)**, **Markdown (.md)**,
+  **Rich Text (.rtf)**, **HTML (.html)**, **CSS (.css)**, **JSON (.json)**, **XML (.xml)**,
+  **CSV (.csv)**, **YAML (.yml)**, **Shell script (.sh)**
+- If the typed name already includes one of those 10 extensions, it's stripped before the picker's
+  extension is appended — the picker always wins
+- On name collision, appends ` 2`, ` 3`, … until unique (e.g., `notes.md`, `notes 2.md`, …)
+- Selects the new file in Finder so it's ready to rename or edit
 
 **Requirements:** None (built-in Finder scripting)
 
@@ -186,7 +247,7 @@ Creates a new `untitled.txt` file in the active Finder window's folder.
 
 1. Bring the destination folder forward in Finder (optional — falls back to Downloads)
 2. Run the script
-3.
+3. Enter a name (or accept `untitled`), then pick a file type
 
 ---
 
@@ -198,7 +259,7 @@ menu. This tutorial walks through the full setup.
 ### Prerequisites
 
 - macOS 12 Monterey or later (tested on macOS 15 Sequoia)
-- **FFmpeg** (video scripts only):
+- **FFmpeg** (video and audio scripts):
   ```bash
   brew install ffmpeg
   ```
@@ -206,6 +267,7 @@ menu. This tutorial walks through the full setup.
 - **Pixelmator Pro** (image resolution script only): Install from
   [pixelmator.com/pro](https://www.pixelmator.com/pro/) (Mac App Store and direct download links are
   on that page). Driven directly via its AppleScript dictionary — no Shortcuts setup needed.
+- **sips** is bundled with macOS — no install needed (used by Add Image Dimensions).
 
 ### Step 1 — Create the Quick Action in Automator
 
@@ -215,22 +277,23 @@ menu. This tutorial walks through the full setup.
 
 ### Step 2 — Configure the Workflow Input
 
-At the top of the workflow editor, configure the input bar:
+At the top of the workflow editor, configure the input bar. The same settings apply to every script
+**except `New file`** (see note below):
 
-| Setting                       | Merge MP4 Videos            | Enhance MP4 Video           | Upscale MP4 Video           | Convert WMV to MP4          | Remove MP4 Audio            | Convert M4A to MP3          | Add Image Dimensions        | Increase Image Resolution   |
-|-------------------------------|-----------------------------|-----------------------------|-----------------------------|-----------------------------|-----------------------------|-----------------------------|-----------------------------|-----------------------------|
-| **Workflow receives current** | `files or folders`          | `files or folders`          | `files or folders`          | `files or folders`          | `files or folders`          | `files or folders`          | `files or folders`          | `files or folders`          |
-| **in**                        | `Finder`                    | `Finder`                    | `Finder`                    | `Finder`                    | `Finder`                    | `Finder`                    | `Finder`                    | `Finder`                    |
-| **Image** *(optional)*        | Choose an icon you like     | Choose an icon you like     | Choose an icon you like     | Choose an icon you like     | Choose an icon you like     | Choose an icon you like     | Choose an icon you like     | Choose an icon you like     |
-| **Color** *(optional)*        | Pick a color for the action | Pick a color for the action | Pick a color for the action | Pick a color for the action | Pick a color for the action | Pick a color for the action | Pick a color for the action | Pick a color for the action |
+| Setting                       | Value                       |
+|-------------------------------|-----------------------------|
+| **Workflow receives current** | `files or folders`          |
+| **in**                        | `Finder`                    |
+| **Image** *(optional)*        | Choose an icon you like     |
+| **Color** *(optional)*        | Pick a color for the action |
 
-> **Why "files or folders" everywhere?** Only `Add image dimensions` actually consumes the Automator `input`
-> parameter (it receives folders); the video scripts and the image resolution script read the Finder selection
-> directly and ignore `input`. Setting all of them to `files or folders` keeps the workflow configuration
+> **Why "files or folders" everywhere?** Only `Add image dimensions` actually consumes the Automator
+> `input` parameter (it receives folders). Every other script reads the Finder selection directly
+> and ignores `input`. Setting all of them to `files or folders` keeps the workflow configuration
 > consistent without affecting behavior.
 >
-> The **New file** script isn't shown above — it uses the front Finder window's folder and doesn't read
-> input or selection, so the Quick Action receives no input (set **Workflow receives** to `no input`).
+> **`New file` is the exception** — it uses the front Finder window's folder and doesn't read input
+> or selection, so its Quick Action receives no input (set **Workflow receives** to `no input`).
 
 ### Step 3 — Add the AppleScript Action
 
@@ -300,6 +363,12 @@ check-requirements.sh                         Local env doctor: per-script readi
 scripts/                                                                                      
 ```
 
+## Security
+
+To report a vulnerability, see [SECURITY.md](SECURITY.md). The scripts shell out to local tools
+(FFmpeg, ExifTool, sips, Pixelmator Pro), make no network requests, read no credentials, and
+operate only on user-selected files in Finder.
+
 ## License
 
-Personal utility scripts. Use at your own risk.
+[MIT](LICENSE) © 2026 Rodrigo Troy. Personal utility scripts — use at your own risk.

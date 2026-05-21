@@ -1,6 +1,6 @@
 # AppleScripts
 
-A collection of macOS AppleScript utilities that automate Finder file tasks — video processing, image batch operations, and quick file creation. Each script runs as an Automator Quick Action (right-click menu);
+A collection of macOS AppleScript utilities that automate Finder file tasks — video processing, image batch operations, and quick file creation. Each script runs as an Automator Quick Action (right-click menu).
 
 ## Scripts
 

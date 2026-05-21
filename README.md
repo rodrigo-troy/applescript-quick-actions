@@ -170,6 +170,26 @@ or other intermediary needed — the script talks to Pixelmator Pro directly.
 
 ---
 
+### New file
+
+Creates a new `untitled.txt` file in the active Finder window's folder.
+
+**What it does:**
+
+- Reads the front Finder window's target folder (falls back to `~/Downloads` if no Finder window is open)
+- Creates `untitled.txt` there
+- Selects the new file in Finder so it's ready to rename
+
+**Requirements:** None (built-in Finder scripting)
+
+**Usage:**
+
+1. Bring the destination folder forward in Finder (optional — falls back to Downloads)
+2. Run the script
+3.
+
+---
+
 ## Adding Scripts to Finder (Quick Actions Tutorial)
 
 The recommended way to use these scripts is as **Automator Quick Actions** ⚙️, which adds them to Finder's right-click
@@ -197,19 +217,19 @@ menu. This tutorial walks through the full setup.
 
 At the top of the workflow editor, configure the input bar:
 
-| Setting                       | Merge MP4 Videos            | Enhance MP4 Video           | Upscale MP4 Video           | Convert WMV to MP4          | Remove MP4 Audio            | Convert M4A to MP3          | Add Image Dimensions        | Increase Image Resolution   | Remove Metadata             |
-|-------------------------------|-----------------------------|-----------------------------|-----------------------------|-----------------------------|-----------------------------|-----------------------------|-----------------------------|-----------------------------|-----------------------------|
-| **Workflow receives current** | `files or folders`          | `files or folders`          | `files or folders`          | `files or folders`          | `files or folders`          | `files or folders`          | `files or folders`          | `files or folders`          | `files or folders`          |
-| **in**                        | `Finder`                    | `Finder`                    | `Finder`                    | `Finder`                    | `Finder`                    | `Finder`                    | `Finder`                    | `Finder`                    | `Finder`                    |
-| **Image** *(optional)*        | Choose an icon you like     | Choose an icon you like     | Choose an icon you like     | Choose an icon you like     | Choose an icon you like     | Choose an icon you like     | Choose an icon you like     | Choose an icon you like     | Choose an icon you like     |
-| **Color** *(optional)*        | Pick a color for the action | Pick a color for the action | Pick a color for the action | Pick a color for the action | Pick a color for the action | Pick a color for the action | Pick a color for the action | Pick a color for the action | Pick a color for the action |
+| Setting                       | Merge MP4 Videos            | Enhance MP4 Video           | Upscale MP4 Video           | Convert WMV to MP4          | Remove MP4 Audio            | Convert M4A to MP3          | Add Image Dimensions        | Increase Image Resolution   |
+|-------------------------------|-----------------------------|-----------------------------|-----------------------------|-----------------------------|-----------------------------|-----------------------------|-----------------------------|-----------------------------|
+| **Workflow receives current** | `files or folders`          | `files or folders`          | `files or folders`          | `files or folders`          | `files or folders`          | `files or folders`          | `files or folders`          | `files or folders`          |
+| **in**                        | `Finder`                    | `Finder`                    | `Finder`                    | `Finder`                    | `Finder`                    | `Finder`                    | `Finder`                    | `Finder`                    |
+| **Image** *(optional)*        | Choose an icon you like     | Choose an icon you like     | Choose an icon you like     | Choose an icon you like     | Choose an icon you like     | Choose an icon you like     | Choose an icon you like     | Choose an icon you like     |
+| **Color** *(optional)*        | Pick a color for the action | Pick a color for the action | Pick a color for the action | Pick a color for the action | Pick a color for the action | Pick a color for the action | Pick a color for the action | Pick a color for the action |
 
 > **Why "files or folders" everywhere?** Only `Add image dimensions` actually consumes the Automator `input`
 > parameter (it receives folders); the video scripts and the image resolution script read the Finder selection
 > directly and ignore `input`. Setting all of them to `files or folders` keeps the workflow configuration
 > consistent without affecting behavior.
 >
-> The **New text file** script isn't shown above — it uses the front Finder window's folder and doesn't read
+> The **New file** script isn't shown above — it uses the front Finder window's folder and doesn't read
 > input or selection, so the Quick Action receives no input (set **Workflow receives** to `no input`).
 
 ### Step 3 — Add the AppleScript Action
@@ -242,7 +262,8 @@ The Quick Action is now available:
 
 ### Uninstalling a Quick Action
 
-Delete the workflow file from `~/Library/Services/` (replace each filename below with the names you chose when saving in Automator).
+Delete the workflow file from
+`~/Library/Services/` (replace each filename below with the names you chose when saving in Automator).
 
 Or open Automator, **File → Open Recent**, select the workflow, then **File → Move to Trash**.
 
@@ -260,13 +281,16 @@ exits non-zero if any script fails to compile, with the offending error printed 
 ### Check external tool requirements: `check-requirements.sh`
 
 `check-requirements.sh` is a read-only environment doctor. It probes the four external tools any script in this repo can depend on (FFmpeg, ExifTool, sips, Pixelmator Pro), then iterates
-`scripts/*.applescript` and reports which scripts are ready to run on this machine. Missing deps surface as `✗ (needs: <tool>)` rows, followed by an `Install missing:` block with the exact `brew install` line (or app-install instructions for Pixelmator Pro).
+`scripts/*.applescript` and reports which scripts are ready to run on this machine. Missing deps surface as
+`✗ (needs: <tool>)` rows, followed by an `Install missing:` block with the exact
+`brew install` line (or app-install instructions for Pixelmator Pro).
 
 ```bash
 ./check-requirements.sh
 ```
 
-Exits `0` when every script is ready (or has no deps), `1` if any is blocked. `NO_COLOR=1` strips ANSI escapes while preserving the symbols. Not wired into CI — runners lack Pixelmator Pro, so the doctor is intentionally local-only.
+Exits `0` when every script is ready (or has no deps), `1` if any is blocked.
+`NO_COLOR=1` strips ANSI escapes while preserving the symbols. Not wired into CI — runners lack Pixelmator Pro, so the doctor is intentionally local-only.
 
 ## Project Structure
 

@@ -4,7 +4,7 @@ A collection of macOS AppleScript utilities that automate Finder file tasks — 
 
 ## Scripts
 
-### Merge MP4 Videos with Audio
+### Merge MP4 Videos
 
 Concatenates 2 or more MP4 files into a single video with motion-interpolated frame blending.
 
@@ -26,16 +26,53 @@ Concatenates 2 or more MP4 files into a single video with motion-interpolated fr
 
 ---
 
-### Add Image Dimensions
+### Crossfade MP4 Videos
 
-Batch-renames image files inside selected folders to include their pixel dimensions.
+Blends two MP4 clips into a single video with a smooth crossfade — the first clip dissolves into the
+second over a duration you choose — using FFmpeg's `xfade` (video) and `acrossfade` (audio) filters.
 
 **What it does:**
 
-- Processes all image files in each selected folder
+- Takes exactly 2 selected MP4 files and orders them by creation date (the older clip plays first)
+- Probes each clip's duration with `ffprobe` to place the transition correctly
+- Prompts for a crossfade duration in seconds (default `1`); accepts a comma or period decimal and
+  rejects values that don't fit inside both clips
+- Crossfades the video with `xfade=transition=fade` — the transition starts `clip1 duration − fade`
+  seconds in, so it ends exactly at the first clip's end — and the audio with `acrossfade`
+  (triangular fade curves)
+- Encodes with software `libx264 -crf 18` (near-lossless, quality-first — a short crossfade isn't
+  speed-bound, and software encoding avoids the banding hardware encoders add to a fade), plus
+  `-pix_fmt yuv420p` so the result plays everywhere, including QuickTime, Safari, and Photos
+- Re-encodes audio as AAC at 128 kbps
+- Saves output as `<older-clip>-crossfaded_YYYYMMDD_HHMMSS.mp4` in the same folder as the first clip
+
+**Requirements:** FFmpeg (`brew install ffmpeg`) — `ffprobe` is bundled with FFmpeg, so no separate
+install needed
+
+> **Note:** Both clips should share the same resolution, frame rate, and pixel format (the `xfade`
+> filter requires it), and each must contain an audio stream. A mismatch surfaces as an FFmpeg error
+> dialog rather than a broken file.
+
+**Usage:**
+
+1. Select exactly 2 MP4 files in Finder
+2. Run the script
+3. Enter a crossfade duration when prompted (or accept the default of 1 second)
+
+---
+
+### Add Image Dimensions
+
+Batch-renames image files to include their pixel dimensions. Accepts folders, individual image
+files, or any mix of the two.
+
+**What it does:**
+
+- Per item in the selection, branches on type: folders are expanded to their image children,
+  files are processed directly
 - Appends `-WIDTHw-HEIGHTh` before the file extension (e.g., `photo.jpg` becomes `photo-1920w-1080h.jpg`)
 - Skips files that already have the dimension tag
-- Shows a summary with renamed/skipped counts
+- Summary header adapts to the selection: folders only, files only, or mixed (`Processed N folders, M files`)
 
 **Supported formats:** jpg, jpeg, png, gif, heic, heif, webp, bmp, tiff, tif.
 
@@ -44,56 +81,65 @@ Batch-renames image files inside selected folders to include their pixel dimensi
 **Usage:**
 
 1. Install as a Quick Action (see [Quick Actions Tutorial](#adding-scripts-to-finder-quick-actions-tutorial) below)
-2. Select one or more **folders** containing images in Finder
+2. Select one or more folders containing images, individual image files, or both in Finder
 3. Right-click → **Quick Actions** → your action name
-
-> **Note:** Unlike the other scripts in this repo, this one only works via Automator/Quick Action invocation. It reads the folder list from Automator's `input` parameter rather than the Finder selection, so plain `osascript "scripts/Add image dimensions.applescript"` exits immediately with "No folder selected."
 
 ---
 
-### Enhance MP4 Video
+### Interpolate MP4 Video
 
-Applies frame interpolation and hardware-accelerated re-encoding to a single MP4 file.
+Applies frame interpolation and hardware-accelerated re-encoding to one or more MP4 files,
+with user-chosen encoder and target FPS.
 
 **What it does:**
 
-- Takes a single selected MP4 file
-- Pre-flight check via `ffprobe`: if the source is already ≥ 59.5 fps (covers exact 60 fps and
-  NTSC 59.94 fps), aborts cleanly with a dialog and skips the lossy re-encode — interpolation
-  would have nothing new to add
-- Applies frame interpolation to 60 fps (`minterpolate` with bidirectional motion estimation)
-- Encodes with Apple's hardware encoder (`h264_videotoolbox`) at 10 Mbps
-- Re-encodes audio as AAC at 192 kbps
-- Saves output as `<original>-enhanced_YYYYMMDD_HHMMSS.mp4` in the same folder
+- Processes one or more selected `.mp4` files
+- Prompts once per batch for an **encoder**: **H.264** (default, universal compatibility) or
+  **HEVC** (smaller files, Apple / modern-web playback)
+- Prompts once per batch for a **target FPS**: **30** or **60** (default)
+- Per-file pre-flight via `ffprobe`: if a source is already ≥ `targetFps − 0.5` (covers the exact
+  target and NTSC variants like 59.94), silently skips that file — interpolation would have
+  nothing to add
+- Applies frame interpolation to the chosen target FPS (`minterpolate` with bidirectional motion estimation)
+- **H.264**: encodes with Apple's hardware encoder (`h264_videotoolbox`) at 10 Mbps CBR and
+  re-encodes audio as AAC at 192 kbps
+- **HEVC**: encodes with Apple's hardware encoder (`hevc_videotoolbox`) in 10-bit `main10` profile
+  (CQ 80), tags as `hvc1` for Apple-platform compatibility, and copies the audio stream losslessly
+  (no re-encode)
+- Per-file errors don't abort the batch; a summary alert reports processed / skipped / error counts
+  (and the codec + FPS labels used) when it finishes
+- Saves output as `<original>-interpolated_YYYYMMDD_HHMMSS.mp4` in the same folder as each source
 
 **Requirements:** FFmpeg (`brew install ffmpeg`) — `ffprobe` is bundled with FFmpeg, so no
 separate install needed
 
 **Usage:**
 
-1. Select exactly 1 MP4 file in Finder
+1. Select one or more `.mp4` files in Finder
 2. Run the script
+3. Pick an encoder, then a target FPS when prompted
 
 ---
 
 ### Upscale MP4 Video
 
-Doubles the resolution of a single MP4 file (2x width, 2x height) using FFmpeg with the lanczos
+Doubles the resolution of one or more MP4 files (2x width, 2x height) using FFmpeg with the lanczos
 resampler and hardware-accelerated H.264 encoding.
 
 **What it does:**
 
-- Takes a single selected MP4 file
+- Processes one or more selected `.mp4` files
 - Applies a spatial upscale to 2x width and 2x height with FFmpeg's `lanczos` resampler — sharper than the default bicubic, the standard pick for video enlargement
-- Encodes with Apple's hardware encoder (`h264_videotoolbox`) at 20 Mbps (twice the Enhance/Merge bitrate to accommodate the quadrupled pixel count)
+- Encodes with Apple's hardware encoder (`h264_videotoolbox`) at 20 Mbps (twice the Interpolate/Merge bitrate to accommodate the quadrupled pixel count)
 - Copies the audio stream losslessly (no re-encoding)
-- Saves output as `<original>-upscaled_YYYYMMDD_HHMMSS.mp4` in the same folder
+- Per-file errors don't abort the batch; a summary alert reports processed/error counts when it finishes
+- Saves output as `<original>-upscaled_YYYYMMDD_HHMMSS.mp4` in the same folder as each source
 
 **Requirements:** FFmpeg (`brew install ffmpeg`)
 
 **Usage:**
 
-1. Select exactly 1 MP4 file in Finder
+1. Select one or more MP4 files in Finder
 2. Run the script
 
 ---
@@ -127,8 +173,9 @@ Removes the audio stream from a single MP4 file using FFmpeg stream copy (lossle
 **What it does:**
 
 - Takes a single selected MP4 file
-- Runs FFmpeg with `-c copy -an`: copies every stream as-is and drops audio
-- Finishes in seconds — no transcoding, no quality loss; video (and any subtitle/data streams) preserved unchanged
+- Runs FFmpeg with `-c copy -an`: drops the audio and stream-copies the rest (no re-encoding)
+- Finishes in seconds — no transcoding, no quality loss; the video is preserved unchanged. A
+  timecode/data track (as in iPhone clips) rides along, but subtitle tracks are not carried
 - Saves output as `<original>-muted_YYYYMMDD_HHMMSS.mp4` in the same folder
 
 **Requirements:** FFmpeg (`brew install ffmpeg`)
@@ -136,6 +183,30 @@ Removes the audio stream from a single MP4 file using FFmpeg stream copy (lossle
 **Usage:**
 
 1. Select exactly 1 MP4 file in Finder
+2. Run the script
+
+---
+
+### Extract Last MP4 Frame
+
+Saves the final frame of one or more MP4 videos as a JPEG using FFmpeg.
+
+**What it does:**
+
+- Processes one or more selected `.mp4` files
+- Seeks to 1 second before the end (`-sseof -1`) and writes every remaining frame to the same
+  output file (`-update 1`), so the clip's true last frame is the one that survives — a single
+  tail-only decode pass, with no frame-counting arithmetic (and none of the off-by-one risk of
+  selecting by frame index, which is 0-based while the frame count is not)
+- Encodes the still as a near-lossless JPEG (`-q:v 2`)
+- Per-file errors don't abort the batch; a summary alert reports processed/error counts when it finishes
+- Saves output as `<original>-lastframe_YYYYMMDD_HHMMSS.jpg` in the same folder as each source
+
+**Requirements:** FFmpeg (`brew install ffmpeg`)
+
+**Usage:**
+
+1. Select one or more MP4 files in Finder
 2. Run the script
 
 ---
@@ -190,7 +261,7 @@ Re-encodes one or more existing MP3 files at a user-chosen bitrate using FFmpeg 
 
 ---
 
-### Increase Image Resolution
+### Upscale Image
 
 Upscales images by 3x using Pixelmator Pro's ML Super Resolution algorithm.
 
@@ -220,64 +291,63 @@ Upscales images by 3x using Pixelmator Pro's ML Super Resolution algorithm.
 
 ---
 
-### Clarity Image
+### Clarify Media
 
-Sharpens one or more images using Pixelmator Pro's clarity adjustment at intensity 20 (20% of the 0–100 slider).
+Applies Pixelmator Pro's clarity adjustment to one or more images or MP4 videos at a user-chosen intensity (-100 to 100, default 20).
 
 **What it does:**
 
-- Processes one or more selected image files
-- Drives Pixelmator Pro directly via its AppleScript dictionary — opens each image, sets
-  `clarity` to 20 on the first layer's color adjustments, exports in the source format, and
-  closes without saving
+- Processes one or more selected images or MP4 videos
+- Prompts once for clarity intensity (-100 to 100, default 20); aborts on Cancel or out-of-range input
+- Drives Pixelmator Pro directly via its AppleScript dictionary — opens each file, sets
+  `clarity` to the chosen intensity on the first layer's color adjustments, exports in the
+  source format, and closes without saving
 - Output format matches input (no format prompt); JPEG/HEIC/WebP/JPEG 2000 export at
-  `compression factor: 90`, PNG/TIFF/GIF are lossless
-- Saves output as `<original>-sharpened.<same-ext>` alongside each source. No timestamp in the
+  `compression factor: 90`, PNG/TIFF/GIF are lossless; MP4 video is re-encoded to MP4
+- Saves output as `<original>-clarified.<same-ext>` alongside each source. No timestamp in the
   suffix — re-running on the same file overwrites the previous output
 - Pre-flight check aborts cleanly if Pixelmator Pro isn't installed
 - Auto-quits Pixelmator Pro at the end if it wasn't already running when the script started
 - Shows a summary with processed/error counts
 
-**Supported formats:** HEIC, JPEG, JPEG 2000, PNG, TIFF, WebP, GIF
+**Supported formats:** HEIC, JPEG, JPEG 2000, PNG, TIFF, WebP, GIF, MP4
 
 **Requirements:** [Pixelmator Pro](https://www.pixelmator.com/pro/)
 
 **Usage:**
 
-1. Select one or more image files in Finder
+1. Select one or more images or MP4 videos in Finder
 2. Run the script
-
-```bash
-osascript "scripts/Clarity image.applescript"
-```
+3. Enter clarity intensity when prompted (or accept the default of 20)
 
 ---
 
-### Texture Image
+### Texturize Media
 
-Adds texture to one or more images using Pixelmator Pro's texture adjustment at intensity 20 (20% of the 0–100 slider).
+Adds texture to one or more images or MP4 videos using Pixelmator Pro's texture adjustment at a user-chosen intensity (-100 to 100, default 20).
 
 **What it does:**
 
-- Processes one or more selected image files
-- Drives Pixelmator Pro directly via its AppleScript dictionary — opens each image, sets
-  `texture` to 20 on the first layer's color adjustments, exports in the source format, and
+- Processes one or more selected images or MP4 videos
+- Prompts once for texture intensity (-100 to 100, default 20); aborts on Cancel or out-of-range input
+- Drives Pixelmator Pro directly via its AppleScript dictionary — opens each file, sets
+  `texture` to the chosen intensity on the first layer's color adjustments, exports in the source format, and
   closes without saving
 - Output format matches input (no format prompt); JPEG/HEIC/WebP/JPEG 2000 export at
-  `compression factor: 90`, PNG/TIFF/GIF are lossless
+  `compression factor: 90`, PNG/TIFF/GIF are lossless; MP4 video is re-encoded to MP4
 - Saves output as `<original>-textured.<same-ext>` alongside each source. No timestamp in the
   suffix — re-running on the same file overwrites the previous output
 - Pre-flight check aborts cleanly if Pixelmator Pro isn't installed
 - Auto-quits Pixelmator Pro at the end if it wasn't already running when the script started
 - Shows a summary with processed/error counts
 
-**Supported formats:** HEIC, JPEG, JPEG 2000, PNG, TIFF, WebP, GIF
+**Supported formats:** HEIC, JPEG, JPEG 2000, PNG, TIFF, WebP, GIF, MP4
 
 **Requirements:** [Pixelmator Pro](https://www.pixelmator.com/pro/)
 
 **Usage:**
 
-1. Select one or more image files in Finder
+1. Select one or more images or MP4 videos in Finder
 2. Run the script
 
 ---
@@ -291,10 +361,11 @@ Strips identifying metadata from selected video and image files.
 - Accepts a mixed Finder selection of videos (`.mp4`, `.mov`) and images
 - For **videos**: runs FFmpeg with `-map_metadata -1 -map_chapters -1 -c copy` — lossless
   stream copy that drops the container's metadata atoms and chapter markers without re-encoding
-- For **images**: runs ExifTool with `-all= --icc_profile:all --orientation` — deletes every
-  metadata group (EXIF, IPTC, XMP, GPS, MakerNotes, Photoshop IRBs, …) while preserving the
-  ICC color profile and the EXIF Orientation tag, so the stripped output renders identically
-  to the source (no color shift, no unintended rotation on phone-camera photos)
+- For **images**: runs ExifTool with `-all= --icc_profile:all -tagsfromfile @ -orientation` —
+  deletes every metadata group (EXIF, IPTC, XMP, GPS, MakerNotes, Photoshop IRBs, …) while
+  preserving the ICC color profile (excluded from the wipe) and copying the EXIF Orientation tag
+  back from the source, so the stripped output renders identically to the source (no color shift,
+  no unintended rotation on phone-camera photos)
 - Per-file errors don't abort the batch; a summary alert reports processed / error / skipped
   counts when it finishes
 - If exactly one of the two tools is missing, the other file class is still processed and the
@@ -314,10 +385,6 @@ Strips identifying metadata from selected video and image files.
 
 1. Select one or more supported files in Finder (mixing videos and images is fine)
 2. Run the script
-
-```bash
-osascript "scripts/Remove metadata.applescript"
-```
 
 ---
 
@@ -396,7 +463,7 @@ The recommended way to use these scripts is as **Automator Quick Actions** ⚙�
   brew install exiftool
   ```
   Used by View Metadata (all supported files) and the image half of Remove Metadata. Auto-detected at `/opt/homebrew/bin/exiftool`, `/usr/local/bin/exiftool`, or `/usr/bin/exiftool`.
-- **Pixelmator Pro** (Increase Image Resolution, Clarity Image, Texture Image): Install from
+- **Pixelmator Pro** (Upscale Image, Clarify Media, Texturize Media): Install from
   [pixelmator.com/pro](https://www.pixelmator.com/pro/) (Mac App Store and direct download links are on that page). Driven directly via its AppleScript dictionary — no Shortcuts setup needed.
 - **sips** is bundled with macOS — no install needed (used by Add Image Dimensions).
 
@@ -416,8 +483,6 @@ At the top of the workflow editor, configure the input bar. The same settings ap
 | **in**                        | `Finder`                    |
 | **Image** *(optional)*        | Choose an icon you like     |
 | **Color** *(optional)*        | Pick a color for the action |
-
-> **Why "files or folders" everywhere?** Only `Add image dimensions` actually consumes the Automator `input` parameter (it receives folders). Every other script reads the Finder selection directly and ignores `input`. Setting all of them to `files or folders` keeps the workflow configuration consistent without affecting behavior. **`New file` is the exception** — it uses the front Finder window's folder and doesn't read input or selection, so its Quick Action receives no input (set **Workflow receives** to `no input`).
 
 ### Step 3 — Add the AppleScript Action
 
@@ -449,10 +514,7 @@ The Quick Action is now available:
 
 ### Uninstalling a Quick Action
 
-Delete the workflow file from
-`~/Library/Services/` (replace each filename below with the names you chose when saving in Automator).
-
-Or open Automator, **File → Open Recent**, select the workflow, then **File → Move to Trash**.
+Delete the workflow file from `~/Library/Services/`.
 
 ## Development
 
@@ -478,13 +540,6 @@ surface as `✗ (needs: <tool>)` rows, followed by an `Install missing:` block w
 
 Exits `0` when every script is ready (or has no deps), `1` if any is blocked. `NO_COLOR=1` strips ANSI escapes while preserving the symbols. Not wired into CI — runners lack Pixelmator Pro, so the doctor is intentionally local-only.
 
-## Project Structure
-
-```
-compile.sh                                    Syntax-check all AppleScripts (used by CI)
-check-requirements.sh                         Local env doctor: per-script readiness against installed tools
-scripts/                                                                                      
-```
 
 ## Security
 

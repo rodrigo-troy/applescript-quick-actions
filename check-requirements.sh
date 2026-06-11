@@ -29,26 +29,20 @@ ffmpeg_path="$(find_in_paths /opt/homebrew/bin/ffmpeg /usr/local/bin/ffmpeg /usr
 exiftool_path="$(find_in_paths /opt/homebrew/bin/exiftool /usr/local/bin/exiftool /usr/bin/exiftool)"
 sips_path="$(find_in_paths /usr/bin/sips)"
 
-if [[ -d "/Applications/Pixelmator Pro.app" ]]; then
-    pixelmator_path="/Applications/Pixelmator Pro.app"
-else
-    pixelmator_path=""
-fi
+pixelmator_path=""
+[[ -d "/Applications/Pixelmator Pro.app" ]] && pixelmator_path="/Applications/Pixelmator Pro.app"
 
 tool_row() {
-    local color="$1" sym="$2" name="$3" path="$4"
-    if [[ -n "$path" ]]; then
-        printf '   %s%s%s %-16s %s\n' "$color" "$sym" "$reset" "$name" "$path"
-    else
-        printf '   %s%s%s %-16s %s\n' "$color" "$sym" "$reset" "$name" "not found"
-    fi
+    local name="$1" path="$2" color="$red" sym="✗"
+    [[ -n "$path" ]] && { color="$green"; sym="✓"; }
+    printf '   %s%s%s %-16s %s\n' "$color" "$sym" "$reset" "$name" "${path:-not found}"
 }
 
 print -r -- "${bold}External tools${reset}"
-[[ -n "$ffmpeg_path"     ]] && tool_row "$green" "✓" "FFmpeg"         "$ffmpeg_path"     || tool_row "$red" "✗" "FFmpeg"         ""
-[[ -n "$exiftool_path"   ]] && tool_row "$green" "✓" "ExifTool"       "$exiftool_path"   || tool_row "$red" "✗" "ExifTool"       ""
-[[ -n "$sips_path"       ]] && tool_row "$green" "✓" "sips"           "$sips_path"       || tool_row "$red" "✗" "sips"           ""
-[[ -n "$pixelmator_path" ]] && tool_row "$green" "✓" "Pixelmator Pro" "$pixelmator_path" || tool_row "$red" "✗" "Pixelmator Pro" ""
+tool_row "FFmpeg"         "$ffmpeg_path"
+tool_row "ExifTool"       "$exiftool_path"
+tool_row "sips"           "$sips_path"
+tool_row "Pixelmator Pro" "$pixelmator_path"
 
 script_lines=()
 script_syms=()
@@ -65,7 +59,7 @@ need_sips=0
 max_name_width=0
 for f in "$SCRIPT_DIR"/*.applescript(N); do
     [[ -f "$f" ]] || continue
-    bn="$(basename "$f" .applescript)"
+    bn="${f:t:r}"
     (( ${#bn} > max_name_width )) && max_name_width=${#bn}
 done
 
@@ -73,7 +67,7 @@ name_col=$(( max_name_width + 2 ))
 
 for f in "$SCRIPT_DIR"/*.applescript(N); do
     [[ -f "$f" ]] || continue
-    bn="$(basename "$f" .applescript)"
+    bn="${f:t:r}"
 
     uses_ffmpeg=0;     grep -qi    ffmpeg                            "$f" && uses_ffmpeg=1
     uses_exiftool=0;   grep -qi    exiftool                          "$f" && uses_exiftool=1

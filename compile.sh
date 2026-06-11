@@ -24,7 +24,7 @@ errors=()
 
 for f in "$SCRIPT_DIR"/*.applescript; do
     [ -f "$f" ] || continue
-    name="$(basename "$f")"
+    name="${f:t}"
 
     if (( ! has_pixelmator_pro )) && grep -q 'application "Pixelmator Pro"' "$f"; then
         print -r -- " ${yellow}⊘${reset}  $name (Pixelmator Pro not installed)"
@@ -37,7 +37,7 @@ for f in "$SCRIPT_DIR"/*.applescript; do
         (( ++passed ))
     else
         print -r -- " ${red}✗${reset}  $name"
-        errors+=("$name"$'\n'"$(cat "$err_log")")
+        errors+=("$name"$'\n'"$(<"$err_log")")
         (( ++failed ))
     fi
 done

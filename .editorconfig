@@ -1,0 +1,69 @@
+root = true
+
+[*]
+indent_size = 4
+indent_style = space
+tab_width = 4
+charset = utf-8
+max_line_length = 120
+trim_trailing_whitespace = true
+insert_final_newline = false
+ij_any_keep_indents_on_empty_lines = false
+ij_any_keep_line_breaks = true
+ij_continuation_indent_size = 8
+ij_formatter_tags_enabled = false
+ij_any_keep_simple_blocks_in_one_line = true
+ij_any_keep_simple_methods_in_one_line = true
+ij_any_keep_simple_lambdas_in_one_line = true
+
+
+[{*.bash,*.sh,*.zsh,.zprofile,.zshrc}]
+ij_shell_minify_program = false
+ij_shell_switch_cases_indented = true
+ij_shell_use_unix_line_separator = true
+ij_shell_keep_column_alignment_padding = true
+
+[{*.har,*.jsb2,*.jsb3,*.json,*.jsonc,*.postman_collection,*.postman_environment,*.swift-format,.babelrc,.eslintrc,.stylelintrc,.ws-context,jest.config}]
+indent_size = 2
+ij_json_array_wrapping = split_into_lines
+ij_json_keep_blank_lines_in_code = 0
+ij_json_keep_indents_on_empty_lines = false
+ij_json_keep_trailing_comma = false
+ij_json_object_wrapping = split_into_lines
+ij_json_property_alignment = do_not_align
+ij_json_space_after_colon = true
+ij_json_space_after_comma = true
+ij_json_space_before_colon = false
+ij_json_space_before_comma = false
+ij_json_spaces_within_braces = false
+ij_json_spaces_within_brackets = false
+ij_json_wrap_long_lines = false
+
+
+[{*.yaml,*.yml}]
+indent_size = 2
+tab_width = 2
+ij_yaml_autoinsert_sequence_marker = true
+ij_yaml_indent_sequence_value = true
+ij_yaml_align_values_properties = do_not_align
+ij_yaml_spaces_within_braces = false
+ij_yaml_spaces_within_brackets = false
+ij_yaml_keep_line_breaks = true
+ij_yaml_line_comment_at_first_column = false
+
+
+[{*.markdown,*.md}]
+max_line_length = off
+ij_markdown_format_tables = true
+ij_markdown_wrap_text_if_long = false
+ij_markdown_wrap_text_inside_blockquotes = false
+ij_markdown_force_one_space_after_blockquote_symbol = true
+ij_markdown_force_one_space_after_header_symbol = true
+ij_markdown_force_one_space_after_list_bullet = true
+ij_markdown_force_one_space_between_words = true
+ij_markdown_max_lines_around_block_elements = 1
+ij_markdown_min_lines_around_block_elements = 1
+ij_markdown_max_lines_around_header = 1
+ij_markdown_min_lines_around_header = 0
+ij_markdown_min_lines_between_paragraphs = 0
+ij_markdown_max_lines_between_paragraphs = 1

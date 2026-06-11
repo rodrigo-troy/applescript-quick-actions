@@ -77,7 +77,6 @@ on run {input, parameters}
 			set summaryMessage to (processedCount as string) & " upscaled to 2x resolution, " & (errorCount as string) & " error(s)." & return & return & errorMessages
 			display alert "Upscale Complete" message summaryMessage as warning
 		end if
-
 	end tell
 
 	return input

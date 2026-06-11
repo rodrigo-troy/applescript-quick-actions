@@ -3,6 +3,7 @@ on run {input, parameters}
 	-- Prompts for output format (PNG/JPEG/HEIC).
 	-- Quits Pixelmator Pro at the end if it wasn't already running when the script started.
 
+	-- Supported formats per Pixelmator Pro's Super Resolution action
 	set supportedExtensions to {"pxd", "heic", "jpg", "jpeg", "jp2", "pdf", "png", "tif", "tiff", "webp", "gif"}
 
 	if not isPixelmatorProInstalled() then
@@ -35,6 +36,7 @@ on run {input, parameters}
 		return
 	end if
 
+	-- Prompt: output format.
 	set formatChoice to choose from list {"PNG (lossless)", "JPEG (quality 90)", "JPEG (quality 80)", "HEIC (quality 90)"} with prompt "Choose output format:" default items {"PNG (lossless)"} OK button name "Upscale" cancel button name "Cancel"
 	if formatChoice is false then return
 	set formatLabel to item 1 of formatChoice
@@ -61,12 +63,10 @@ on run {input, parameters}
 
 	display notification "Processing " & totalFiles & " image(s) at 3x..." with title "Super Resolution" sound name "default"
 
-	repeat with i from 1 to totalFiles
-		set imgAlias to item i of imageFiles
+	repeat with imgRef in imageFiles
+		set imgAlias to contents of imgRef
 		set imgPosix to POSIX path of imgAlias
-		set pathParts to splitPath(imgPosix)
-		set parentDir to item 1 of pathParts
-		set nameNoExt to item 2 of pathParts
+		set {parentDir, nameNoExt} to splitPath(imgPosix)
 		set outputPath to parentDir & "/" & nameNoExt & "-3x." & outExt
 
 		set didOpen to false
@@ -75,7 +75,10 @@ on run {input, parameters}
 				open imgAlias
 				set didOpen to true
 				super resolution front document
-
+				-- Optional post-processing — uncomment to apply ML Enhance to upscaled photos:
+				-- enhance front document
+				-- Optional post-processing — uncomment to apply ML Denoise:
+				-- denoise front document
 				if outFormat is "PNG" then
 					export front document to POSIX file outputPath as PNG
 				else if outFormat is "JPEG" then

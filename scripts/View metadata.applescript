@@ -1,6 +1,8 @@
 on run {input, parameters}
 	-- Write a human-readable metadata dump for each Finder-selected video or
-	-- image file to a .txt sidecar in the same folder.
+	-- image file to a .txt sidecar in the same folder. Conceptual pair to
+	-- Remove metadata.applescript: anything that script strips, this script
+	-- can show you before you strip it.
 
 	tell application "Finder"
 		set selectedFiles to selection
@@ -26,12 +28,12 @@ on run {input, parameters}
 			return
 		end if
 
+		set supportedExtensions to {"mp4", "mov", "jpg", "jpeg", "png", "gif", "heic", "heif", "webp", "bmp", "tiff", "tif"}
 		set supportedFiles to {}
 		set skippedCount to 0
 
 		repeat with f in selectedFiles
-			set fName to name of f as string
-			if (fName ends with ".mp4") or (fName ends with ".mov") or (fName ends with ".jpg") or (fName ends with ".jpeg") or (fName ends with ".png") or (fName ends with ".gif") or (fName ends with ".heic") or (fName ends with ".heif") or (fName ends with ".webp") or (fName ends with ".bmp") or (fName ends with ".tiff") or (fName ends with ".tif") then
+			if (name extension of f as string) is in supportedExtensions then
 				set end of supportedFiles to f
 			else
 				set skippedCount to skippedCount + 1

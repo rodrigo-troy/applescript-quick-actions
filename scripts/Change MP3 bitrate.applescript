@@ -68,8 +68,8 @@ on run {input, parameters}
 
 		display notification "Re-encoding " & totalFiles & " file(s) at " & audioBitrate & "..." with title "Change MP3 Bitrate"
 
-		repeat with i from 1 to totalFiles
-			set sourceFile to item i of mp3Files as alias
+		repeat with sourceRef in mp3Files
+			set sourceFile to sourceRef as alias
 			set parentFolder to container of sourceFile as alias
 			set parentFolderPath to POSIX path of parentFolder
 			set sourcePath to POSIX path of sourceFile

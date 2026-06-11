@@ -62,8 +62,8 @@ on run {input, parameters}
 
 		display notification "Converting " & totalFiles & " file(s) to MP3 (" & audioBitrate & ")..." with title "M4A to MP3"
 
-		repeat with i from 1 to totalFiles
-			set sourceFile to item i of m4aFiles as alias
+		repeat with sourceRef in m4aFiles
+			set sourceFile to sourceRef as alias
 			set parentFolder to container of sourceFile as alias
 			set parentFolderPath to POSIX path of parentFolder
 			set sourcePath to POSIX path of sourceFile

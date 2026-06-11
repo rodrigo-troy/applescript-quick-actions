@@ -1,12 +1,13 @@
 on run {input, parameters}
-	-- Upscale a single MP4 video to double its resolution (2x width, 2x height) using
+	-- Upscale one or more MP4 videos to double their resolution (2x width, 2x height) using
 	-- FFmpeg with the lanczos resampler and hardware-accelerated h264_videotoolbox encoding.
+	-- Per-file errors don't abort the batch; a summary alert reports processed/error counts.
 
 	tell application "Finder"
 		set selectedFiles to selection
 
 		if selectedFiles is {} then
-			display dialog "Please select an MP4 file in Finder first." buttons {"OK"} default button 1 with icon caution
+			display dialog "Please select one or more MP4 files in Finder first." buttons {"OK"} default button 1 with icon caution
 			return
 		end if
 
@@ -19,25 +20,9 @@ on run {input, parameters}
 		end repeat
 
 		if mp4Files is {} then
-			display dialog "No MP4 file selected. Please select an MP4 file to upscale." buttons {"OK"} default button 1 with icon caution
+			display dialog "No MP4 file selected. Please select one or more MP4 files to upscale." buttons {"OK"} default button 1 with icon caution
 			return
 		end if
-
-		if (count of mp4Files) > 1 then
-			display dialog "Please select only 1 MP4 file." buttons {"OK"} default button 1 with icon caution
-			return
-		end if
-
-		set sourceFile to item 1 of mp4Files as alias
-		set parentFolder to container of sourceFile as alias
-		set parentFolderPath to POSIX path of parentFolder
-		set sourcePath to POSIX path of sourceFile
-
-		set sourceName to name of sourceFile
-		set baseName to text 1 thru -5 of sourceName
-		set timestamp to do shell script "date +%Y%m%d_%H%M%S"
-		set outputName to baseName & "-upscaled_" & timestamp & ".mp4"
-		set outputPath to parentFolderPath & outputName
 
 		set ffmpegPath to ""
 		set possiblePaths to {"/opt/homebrew/bin/ffmpeg", "/usr/local/bin/ffmpeg", "/usr/bin/ffmpeg"}
@@ -55,15 +40,43 @@ on run {input, parameters}
 			return
 		end if
 
-		set ffmpegCmd to ffmpegPath & " -y -i " & quoted form of sourcePath & " -vf \"scale=iw*2:ih*2:flags=lanczos\" -c:v h264_videotoolbox -b:v 20M -c:a copy " & quoted form of outputPath & " 2>&1"
+		set timestamp to do shell script "date +%Y%m%d_%H%M%S"
+		set totalFiles to count of mp4Files
+		set processedCount to 0
+		set errorCount to 0
+		set errorMessages to ""
 
-		try
-			display notification "Processing... this may take a while" with title "Upscaling Video"
-			do shell script ffmpegCmd
-			display notification "Created: " & outputName with title "Upscale Complete" subtitle "Resolution doubled (2x)"
-		on error errMsg
-			display dialog "Error processing file:" & return & return & errMsg buttons {"OK"} default button 1 with icon stop
-		end try
+		display notification "Upscaling " & totalFiles & " video(s)... this may take a while" with title "Upscale MP4 Video"
+
+		repeat with sourceRef in mp4Files
+			set sourceFile to sourceRef as alias
+			set parentFolder to container of sourceFile as alias
+			set parentFolderPath to POSIX path of parentFolder
+			set sourcePath to POSIX path of sourceFile
+
+			set sourceName to name of sourceFile
+			set baseName to text 1 thru -5 of sourceName
+			set outputName to baseName & "-upscaled_" & timestamp & ".mp4"
+			set outputPath to parentFolderPath & outputName
+
+			set ffmpegCmd to ffmpegPath & " -y -i " & quoted form of sourcePath & " -vf \"scale=iw*2:ih*2:flags=lanczos\" -c:v h264_videotoolbox -b:v 20M -c:a copy " & quoted form of outputPath & " 2>&1"
+
+			try
+				do shell script ffmpegCmd
+				set processedCount to processedCount + 1
+				display notification "Upscaled " & (processedCount as string) & " of " & (totalFiles as string) with title "Upscale MP4 Video"
+			on error errMsg
+				set errorCount to errorCount + 1
+				set errorMessages to errorMessages & baseName & ": " & errMsg & return
+			end try
+		end repeat
+
+		if errorCount is 0 then
+			display alert "Upscale Complete" message (processedCount as string) & " video(s) upscaled to 2x resolution (2x width × 2x height)."
+		else
+			set summaryMessage to (processedCount as string) & " upscaled to 2x resolution, " & (errorCount as string) & " error(s)." & return & return & errorMessages
+			display alert "Upscale Complete" message summaryMessage as warning
+		end if
 
 	end tell
 

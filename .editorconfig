@@ -40,18 +40,6 @@ ij_json_spaces_within_brackets = false
 ij_json_wrap_long_lines = false
 
 
-[{*.yaml,*.yml}]
-indent_size = 2
-tab_width = 2
-ij_yaml_autoinsert_sequence_marker = true
-ij_yaml_indent_sequence_value = true
-ij_yaml_align_values_properties = do_not_align
-ij_yaml_spaces_within_braces = false
-ij_yaml_spaces_within_brackets = false
-ij_yaml_keep_line_breaks = true
-ij_yaml_line_comment_at_first_column = false
-
-
 [{*.markdown,*.md}]
 max_line_length = off
 ij_markdown_format_tables = true
